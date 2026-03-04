@@ -3,11 +3,12 @@ import requests
 from datetime import datetime
 
 # ────────────────────────────────────────────────
-# GOL Branding & Custom Styling with Garet font
+# Load Garet font + GOL styling
 # ────────────────────────────────────────────────
 st.markdown("""
     <link href="https://cdn.jsdelivr.net/gh/type-forward/garet@latest/fonts/webfonts/garet.css" rel="stylesheet">
     <style>
+    /* Garet header with your exact colours */
     .gol-header {
         font-family: 'Garet', 'Segoe UI', Arial, sans-serif !important;
         font-weight: 700 !important;
@@ -15,29 +16,41 @@ st.markdown("""
         text-align: center !important;
         margin: 1.5rem 0 0.5rem !important;
     }
-    .gol-header .global, .gol-header .ocean {
+    .gol-header .global, .gol-header .logistics {
         color: #015486 !important;
     }
-    .gol-header .rest {
-        color: #0d47a1 !important;
-    }
-    .gol-tagline {
+    .gol-header .ocean {
         color: #8fd8ff !important;
+    }
+
+    /* Accent color */
+    :root {
+        --accent: #8fd8ff;
+        --primary: #015486;
+    }
+
+    /* Tagline */
+    .gol-tagline {
+        color: var(--accent) !important;
         font-size: 1.45rem !important;
         text-align: center !important;
         margin-bottom: 2.5rem !important;
     }
+
+    /* Result card */
     .result-card {
         background-color: white !important;
-        border: 1px solid #8fd8ff !important;
-        border-left: 6px solid #015486 !important;
+        border: 1px solid var(--accent) !important;
+        border-left: 6px solid var(--primary) !important;
         border-radius: 12px !important;
         padding: 2rem !important;
         box-shadow: 0 6px 16px rgba(0,0,0,0.08) !important;
         margin: 2rem 0 2.5rem !important;
     }
+
+    /* Track button */
     .stButton > button {
-        background-color: #015486 !important;
+        background-color: var(--primary) !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
@@ -50,18 +63,22 @@ st.markdown("""
         display: block !important;
     }
     .stButton > button:hover {
-        background-color: #8fd8ff !important;
-        color: #015486 !important;
+        background-color: var(--accent) !important;
+        color: var(--primary) !important;
     }
+
+    /* Messages & input */
     .stSuccess, .stInfo, .stError {
         border-radius: 8px !important;
         padding: 1.2rem !important;
     }
     .stTextInput > div > div > input {
-        border: 2px solid #8fd8ff !important;
+        border: 2px solid var(--accent) !important;
         border-radius: 10px !important;
         padding: 0.9rem !important;
     }
+
+    /* Footer */
     .gol-footer {
         text-align: center !important;
         color: #444 !important;
@@ -79,11 +96,12 @@ st.set_page_config(
     layout="wide"
 )
 
+# Header with exact colour split
 st.markdown("""
     <div class="gol-header">
         <span class="global">Global</span> 
         <span class="ocean">Ocean</span> 
-        <span class="rest">Logistics</span>
+        <span class="logistics">Logistics</span>
     </div>
 """, unsafe_allow_html=True)
 
@@ -91,6 +109,9 @@ st.markdown('<div class="gol-tagline">Air Freight Tracker – Fast, Reliable, Gl
 
 st.markdown("Enter your **Master Air Waybill (MAWB)** number to track your shipment.")
 
+# ────────────────────────────────────────────────
+# Airline mapping
+# ────────────────────────────────────────────────
 PREFIX_MAP = {
     "020": {"name": "Lufthansa Cargo", "code": "LH", "has_api": True},
     "999": {"name": "Air China Cargo", "code": "CA", "has_api": False},
