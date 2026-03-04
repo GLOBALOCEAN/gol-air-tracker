@@ -1,66 +1,71 @@
 import streamlit as st
 import requests
-import webbrowser
+from datetime import datetime
 
 # ────────────────────────────────────────────────
-# Load Garet font from Google Fonts + custom colors
+# GOL branding + styling (matches sea portal feel)
 # ────────────────────────────────────────────────
-PRIMARY_COLOR = "#015486"      # Global, Logistics, main text/accent
-ACCENT_COLOR  = "#8fd8ff"      # Ocean highlight
-BG_COLOR      = "#F8FCFF"
-
-st.markdown(f"""
-    <link href="https://fonts.googleapis.com/css2?family=Garet:wght@400;700&display=swap" rel="stylesheet">
+st.markdown("""
     <style>
-        html, body, [data-testid="stAppViewContainer"], .stApp {{
-            font-family: 'Garet', sans-serif !important;
-            background-color: {BG_COLOR};
-        }}
-        h1, h2, h3, h4, h5, h6 {{
-            font-family: 'Garet', sans-serif !important;
-            font-weight: 700;
-            color: {PRIMARY_COLOR};
-        }}
-        .stButton > button {{
-            background-color: {PRIMARY_COLOR};
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 0.7rem 1.4rem;
-            font-weight: bold;
-            font-family: 'Garet', sans-serif;
-        }}
-        .stButton > button:hover {{
-            background-color: {ACCENT_COLOR};
-            color: {PRIMARY_COLOR};
-        }}
-        .company-name {{
-            font-family: 'Garet', sans-serif;
-            font-weight: 700;
-            font-size: 2.4rem;
-            margin: 0;
-            line-height: 1;
-        }}
-        .company-name .global {{ color: {PRIMARY_COLOR}; }}
-        .company-name .ocean {{ color: {ACCENT_COLOR}; }}
-        .company-name .logistics {{ color: {PRIMARY_COLOR}; }}
-        .subtitle {{
-            color: {PRIMARY_COLOR};
-            font-size: 1.3rem;
-            margin-top: 0.3rem;
-            font-weight: 400;
-        }}
-        section[data-testid="stSidebar"] {{
-            background-color: {PRIMARY_COLOR};
-            color: white;
-        }}
-        .stSuccess, .stInfo {{
-            background-color: rgba(1, 84, 134, 0.08);
-            border-left: 4px solid {PRIMARY_COLOR};
-            color: {PRIMARY_COLOR};
-        }}
-        hr {{ border-color: {PRIMARY_COLOR}; opacity: 0.4; }}
-        footer {{ visibility: hidden; }}
+    /* Header */
+    .gol-header {
+        color: #0d47a1;
+        font-size: 2.8rem;
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0 8px;
+    }
+    .gol-tagline {
+        color: #1976d2;
+        font-size: 1.3rem;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    /* Blue button */
+    .stButton > button {
+        background-color: #0d47a1;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 14px 32px;
+        font-size: 1.15rem;
+        font-weight: bold;
+        width: 100%;
+        max-width: 400px;
+        margin: 20px auto;
+        display: block;
+    }
+    .stButton > button:hover {
+        background-color: #1565c0;
+    }
+    
+    /* Result card */
+    .result-card {
+        background-color: #f8fbff;
+        padding: 24px;
+        border-radius: 10px;
+        border: 1px solid #bbdefb;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin: 20px 0;
+    }
+    
+    /* Messages */
+    .stSuccess, .stInfo, .stError {
+        border-radius: 8px;
+        padding: 16px !important;
+        margin: 16px 0;
+    }
+    
+    /* Footer */
+    .gol-footer {
+        text-align: center;
+        color: #555;
+        font-size: 0.9rem;
+        margin-top: 60px;
+        padding: 20px;
+        border-top: 1px solid #eee;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -68,119 +73,116 @@ st.markdown(f"""
 # Page config
 # ────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Global Ocean Logistics – Air Freight Tracker",
-    page_icon="🌊",
+    page_title="Global Ocean Logistics - Air Freight Tracker",
+    page_icon="✈️",
     layout="wide"
 )
 
-# ────────────────────────────────────────────────
-# Header with branded name
-# ────────────────────────────────────────────────
-st.markdown("""
-<div style="text-align: center; padding: 1.5rem 0 1rem;">
-    <div class="company-name">
-        <span class="global">Global</span> 
-        <span class="ocean">Ocean</span> 
-        <span class="logistics">Logistics</span>
-    </div>
-    <div class="subtitle">Air Freight Tracker</div>
-</div>
-<hr style="margin: 1rem 0 2rem;">
-""", unsafe_allow_html=True)
+# Header
+st.markdown('<div class="gol-header">Global Ocean Logistics</div>', unsafe_allow_html=True)
+st.markdown('<div class="gol-tagline">Air Freight Tracker – Reliable Global Solutions</div>', unsafe_allow_html=True)
 
-st.markdown("Enter your **MAWB number** below to track air shipments. The official airline tracking page will open directly.")
+st.markdown("Enter your **Master Air Waybill (MAWB)** number to track your shipment.")
 
 # ────────────────────────────────────────────────
-# Airline database (same as before – correct URLs)
+# Airline mapping (expand as needed)
 # ────────────────────────────────────────────────
-AIRLINES = {
-    "020": ("Lufthansa Cargo", "LH", None, "api"),
-    "999": ("Air China Cargo", "CA", "https://www.airchinacargo.com/cargo_en/gzcx/hkyd/list/index_pc.html", False),
-    "784": ("China Southern Cargo", "CZ", "https://tang.csair.com/EN/WebFace/Tang.WebFace.Cargo/AgentAwbBrower.aspx?lan=en-us", True),
-    "781": ("China Eastern Cargo", "MU", "https://cargo.ceair.com/en/track-shipment", False),
-    "160": ("Cathay Pacific Cargo", "CX", "https://www.cathaycargo.com/en-us/track-and-trace.html", False),
-    "180": ("Korean Air Cargo", "KE", "https://cargo.koreanair.com/tracking?awb=", True),
-    "695": ("EVA Air Cargo", "BR", "https://www.brcargo.com/NEC_WEB/Tracking/QuickTracking/Index", False),
-    "618": ("Singapore Airlines Cargo", "SQ", "https://www.singaporeair.com/en_UK/sg/cargo/track-shipment/?awb=", True),
-    "131": ("Japan Airlines Cargo", "JL", "https://www.jalcargo.com/en/track-shipment", False),
-    "988": ("Asiana Cargo", "OZ", "https://www.asianacargo.com/tracking/viewTraceAirWaybill.do?lang=en", True),
-    "176": ("Emirates SkyCargo", "EK", "https://www.skycargo.com/shipping/tracking/", True),
-    "157": ("Qatar Airways Cargo", "QR", "https://www.qrcargo.com/en/tracking", True),
-    "235": ("Turkish Cargo", "TK", "https://www.turkishcargo.com.tr/en/tracking", True),
+PREFIX_MAP = {
+    "020": {"name": "Lufthansa Cargo", "code": "LH", "has_api": True},
+    "999": {"name": "Air China Cargo", "code": "CA", "has_api": False},
+    "784": {"name": "China Southern Cargo", "code": "CZ", "has_api": False},
+    "781": {"name": "China Eastern Cargo", "code": "MU", "has_api": False},
+    "160": {"name": "Cathay Pacific Cargo", "code": "CX", "has_api": False},
+    "180": {"name": "Korean Air Cargo", "code": "KE", "has_api": False},
+    "695": {"name": "EVA Air Cargo", "code": "BR", "has_api": False},
+    # Add more prefixes here
 }
 
+# ────────────────────────────────────────────────
+# Helper: parse MAWB
+# ────────────────────────────────────────────────
 def parse_mawb(mawb_str):
     cleaned = ''.join(c for c in str(mawb_str) if c.isdigit())
     if len(cleaned) not in (10, 11):
         return None, None
-    return cleaned[:3], cleaned[3:]
-
-def fetch_lufthansa(prefix, number):
-    url = f"https://api.lufthansa-cargo.com/lh/handling/shipment?aWBPrefix={prefix}&aWBNumber={number}"
-    try:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
-
-def open_tracking_page(prefix, number):
-    if prefix not in AIRLINES:
-        st.error("Airline prefix not supported yet.")
-        return
-
-    name, code, base_url, supports_direct = AIRLINES[prefix]
-    full_awb = f"{prefix}-{number}" if len(number) == 8 else f"{prefix}{number}"
-
-    if prefix == "020":
-        data = fetch_lufthansa(prefix, number)
-        if "error" in data:
-            st.error(f"❌ {data['error']}")
-        else:
-            st.subheader(f"📊 {name} Tracking Result")
-            st.json(data)
-        return
-
-    url = base_url
-    if supports_direct and base_url:
-        if "?" in base_url or "=" in base_url:
-            url += full_awb
-
-    webbrowser.open_new_tab(url)
-
-    st.success(f"🌊 **{name}** tracking page opened")
-    st.info(f"AWB used: **{full_awb}**")
-    st.caption("If not auto-filled, paste the AWB into the form on the page.")
+    prefix = cleaned[:3]
+    number = cleaned[3:]
+    return prefix, number
 
 # ────────────────────────────────────────────────
-# Input area
+# Get tracking link for non-API airlines
+# ────────────────────────────────────────────────
+def get_tracking_link(airline_name, prefix, number):
+    full_awb = f"{prefix}-{number}" if len(number) == 8 else f"{prefix}{number}"
+    
+    # Specific known links (add more when you find them)
+    if "Air China" in airline_name:
+        return f"https://www.airchinacargo.com/cargo_en/gzcx/hkyd/list/index_pc.html", full_awb
+    if "China Southern" in airline_name:
+        return f"https://tang.csair.com/EN/WebFace/Tang.WebFace.Cargo/AgentAwbBrower.aspx?lan=en-us&AWB={full_awb}", full_awb
+    if "Cathay Pacific" in airline_name:
+        return f"https://www.cathaycargo.com/en-us/track-and-trace.html?awb={full_awb}", full_awb
+    
+    # Fallback: Google search for tracking page
+    return f"https://www.google.com/search?q={airline_name.replace(' ', '+')}+cargo+tracking+{full_awb}", full_awb
+
+# ────────────────────────────────────────────────
+# Main input
 # ────────────────────────────────────────────────
 mawb_input = st.text_input(
     "MAWB Number",
-    placeholder="e.g. 160-06728654  or  999-38712203  or  020-08002050",
+    placeholder="e.g. 999-38712203 or 020-08002050",
     help="With or without dashes/spaces"
 )
 
-if st.button("Track Shipment", type="primary", use_container_width=True):
+if st.button("Track Shipment"):
     prefix, number = parse_mawb(mawb_input)
     
     if not prefix or not number:
-        st.error("❌ Please enter a valid 10 or 11-digit MAWB number.")
+        st.error("Invalid MAWB format. Please enter 10 or 11 digits.")
     else:
-        if prefix in AIRLINES:
-            name = AIRLINES[prefix][0]
-            st.success(f"Detected: **{name}** ({AIRLINES[prefix][1]})")
-            open_tracking_page(prefix, number)
+        airline = PREFIX_MAP.get(prefix, {"name": f"Carrier ({prefix})", "code": prefix, "has_api": False})
+        
+        st.markdown('<div class="result-card">', unsafe_allow_html=True)
+        
+        st.success(f"**Detected:** {airline['name']} ({airline['code']}) – AWB {prefix}-{number}")
+        
+        if airline.get("has_api", False) and prefix == "020":
+            # Lufthansa API placeholder
+            st.info("Querying Lufthansa Cargo API... (result would appear here)")
+            # You can add real API call here if desired
         else:
-            st.warning(f"Prefix **{prefix}** is not yet in our database.")
+            url, full_awb = get_tracking_link(airline["name"], prefix, number)
+            
+            st.markdown(f"""
+                <p style="font-size:1.1rem; margin:20px 0 10px;">
+                    Open the official {airline['name']} tracking page:
+                </p>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+                <a href="{url}" target="_blank" style="
+                    background-color: #0d47a1;
+                    color: white;
+                    padding: 16px 32px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    display: inline-block;
+                ">
+                    Open Tracking Page → {full_awb}
+                </a>
+            """, unsafe_allow_html=True)
+            
+            st.caption("Click the button above – it will open in a new tab.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# ────────────────────────────────────────────────
 # Footer
-# ────────────────────────────────────────────────
-st.markdown("---")
-st.markdown(f"""
-<div style="text-align: center; color: {PRIMARY_COLOR}; font-size: 0.95rem; padding: 1.5rem 0;">
-    © 2026 <span class="global">Global</span> <span class="ocean">Ocean</span> <span class="logistics">Logistics</span><br>
-    Northern Ireland's Leading Logistics Partner • Air & Sea Freight • Customs • Road Transport
-</div>
+st.markdown("""
+    <div class="gol-footer">
+        © Global Ocean Logistics NI • Air & Sea Freight Solutions<br>
+        Belfast / Newtownards • contact@globaloceanlogisticsni.com
+    </div>
 """, unsafe_allow_html=True)
