@@ -3,24 +3,27 @@ import requests
 from datetime import datetime
 
 # ────────────────────────────────────────────────
-# Load Garet font from CDN + custom GOL styling
+# Load Garet font from CDN + GOL styling
 # ────────────────────────────────────────────────
 st.markdown("""
     <link href="https://cdn.jsdelivr.net/gh/type-forward/garet@latest/fonts/webfonts/garet.css" rel="stylesheet">
     <style>
-    /* Use Garet for header (bold) */
+    /* Garet header with your colors */
     .gol-header {
         font-family: 'Garet', 'Segoe UI', Arial, sans-serif !important;
         font-weight: 700 !important;
-        font-size: 3rem !important;
+        font-size: 3.2rem !important;
         text-align: center !important;
         margin: 1.5rem 0 0.5rem !important;
     }
-    .gol-header span.global { color: #015486 !important; }
-    .gol-header span.ocean { color: #015486 !important; }
-    .gol-header span.rest { color: #0d47a1 !important; }
+    .gol-header .global, .gol-header .ocean {
+        color: #015486 !important;
+    }
+    .gol-header .rest {
+        color: #0d47a1 !important;
+    }
 
-    /* Accent color #8fd8ff */
+    /* Accent color */
     :root {
         --accent: #8fd8ff;
         --primary: #015486;
@@ -29,13 +32,13 @@ st.markdown("""
     /* Tagline */
     .gol-tagline {
         color: var(--accent) !important;
-        font-size: 1.4rem !important;
+        font-size: 1.45rem !important;
         text-align: center !important;
         margin-bottom: 2.5rem !important;
         font-weight: 500 !important;
     }
 
-    /* Card for result */
+    /* Result card */
     .result-card {
         background-color: white !important;
         border: 1px solid var(--accent) !important;
@@ -46,7 +49,7 @@ st.markdown("""
         margin: 2rem 0 2.5rem !important;
     }
 
-    /* Track button - using accent on hover */
+    /* Track button */
     .stButton > button {
         background-color: var(--primary) !important;
         color: white !important;
@@ -63,24 +66,14 @@ st.markdown("""
     }
     .stButton > button:hover {
         background-color: var(--accent) !important;
-        transform: translateY(-2px) !important;
+        color: var(--primary) !important;
     }
 
-    /* Messages */
-    .stSuccess {
-        background-color: #e8f5e9 !important;
-        border-left: 5px solid #4caf50 !important;
+    /* Messages & input */
+    .stSuccess, .stInfo, .stError {
+        border-radius: 8px !important;
+        padding: 1.2rem !important;
     }
-    .stInfo {
-        background-color: #e3f2fd !important;
-        border-left: 5px solid var(--accent) !important;
-    }
-    .stError {
-        background-color: #ffebee !important;
-        border-left: 5px solid #f44336 !important;
-    }
-
-    /* Input */
     .stTextInput > div > div > input {
         border: 2px solid var(--accent) !important;
         border-radius: 10px !important;
@@ -101,7 +94,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────
-# Page config
+# Page setup
 # ────────────────────────────────────────────────
 st.set_page_config(
     page_title="Global Ocean Logistics – Air Freight Tracker",
@@ -109,11 +102,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Header with font & colour split
+# Header with Garet + your colors
 st.markdown("""
     <div class="gol-header">
-        <span class="global">Global</span> 
-        <span class="ocean">Ocean</span> 
+        <span class="global">Global</span>
+        <span class="ocean">Ocean</span>
         <span class="rest">Logistics</span>
     </div>
 """, unsafe_allow_html=True)
@@ -136,7 +129,23 @@ PREFIX_MAP = {
 }
 
 # ────────────────────────────────────────────────
-# Parse MAWB
+# Parse MAWB - fixed version
 # ────────────────────────────────────────────────
 def parse_mawb(mawb_str):
-    cleaned = ''.join(c for c in str(mawb_str) if c.is
+    cleaned = ''.join(c for c in str(mawb_str) if c.isdigit())
+    if len(cleaned) not in (10, 11):
+        return None, None
+    prefix = cleaned[:3]
+    number = cleaned[3:]
+    return prefix, number
+
+# ────────────────────────────────────────────────
+# Tracking link generator
+# ────────────────────────────────────────────────
+def get_tracking_link(airline_name, prefix, number):
+    full_awb = f"{prefix}-{number}" if len(number) == 8 else f"{prefix}{number}"
+    
+    if "Air China" in airline_name:
+        return f"https://www.airchinacargo.com/cargo_en/gzcx/hkyd/list/index_pc.html", full_awb
+    if "China Southern" in airline_name:
+        return f"https://tang.csair.com/EN/WebFace/Tang.WebFace.Cargo/AgentAw
